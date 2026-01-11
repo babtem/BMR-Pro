@@ -1,9 +1,10 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { UserData, BMRResults } from "../types";
 
+// Always initialize GoogleGenAI with a named parameter using process.env.API_KEY directly.
 export const getHealthInsights = async (userData: UserData, results: BMRResults) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const prompt = `
     Based on the following profile, provide a concise health and nutrition summary:
@@ -22,6 +23,7 @@ export const getHealthInsights = async (userData: UserData, results: BMRResults)
   `;
 
   try {
+    // Using gemini-3-flash-preview for basic text task.
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -32,6 +34,7 @@ export const getHealthInsights = async (userData: UserData, results: BMRResults)
       }
     });
 
+    // Directly access the .text property from the GenerateContentResponse object.
     return response.text || "Could not generate insights at this time.";
   } catch (error) {
     console.error("Gemini API Error:", error);
