@@ -6,6 +6,7 @@ import CalculatorForm from './components/CalculatorForm';
 import ResultDisplay from './components/ResultDisplay';
 import InsightsPanel from './components/InsightsPanel';
 import HealthArticles from './components/HealthArticles';
+import LoginModal from './components/LoginModal';
 import { getHealthInsights } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -30,6 +31,8 @@ const App: React.FC = () => {
   const [results, setResults] = useState<BMRResults | null>(null);
   const [insights, setInsights] = useState<string | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -44,6 +47,12 @@ const App: React.FC = () => {
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
   const calculateBMR = useCallback(() => {
+    // If user hasn't provided an email yet, show the login modal first
+    if (!userEmail) {
+      setShowLogin(true);
+      return;
+    }
+
     let { weight, height, age, gender, activityLevel, unitSystem } = userData;
     
     // Internal conversion to metric for calculation
@@ -86,13 +95,37 @@ const App: React.FC = () => {
       setInsights("Unable to fetch AI insights at this moment.");
       setLoadingInsights(false);
     });
-  }, [userData]);
+  }, [userData, userEmail]);
+
+  const handleLogin = (email: string) => {
+    setUserEmail(email);
+    setShowLogin(false);
+    // Automatically trigger calculation once logged in
+    // Note: This relies on the fact that 'userEmail' will be available in the next render cycle's 'calculateBMR'
+    // but to be safe and responsive, we can set state and then use an effect or just call the logic.
+    // However, since state updates are async, we use a simple effect below.
+  };
+
+  // Trigger calculation when userEmail is set and showLogin was just closed
+  useEffect(() => {
+    if (userEmail && results === null && !showLogin) {
+      calculateBMR();
+    }
+  }, [userEmail, showLogin, results, calculateBMR]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <span className="font-bold text-xl text-slate-900 dark:text-white">BMR Pro</span>
+          </div>
           <button
             onClick={toggleDarkMode}
             className="p-2 rounded-full bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
@@ -156,6 +189,13 @@ const App: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Login Modal */}
+        <LoginModal 
+          isOpen={showLogin} 
+          onLogin={handleLogin} 
+          onClose={() => setShowLogin(false)} 
+        />
       </div>
     </div>
   );
