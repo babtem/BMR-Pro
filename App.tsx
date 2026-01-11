@@ -8,6 +8,7 @@ import InsightsPanel from './components/InsightsPanel';
 import HealthArticles from './components/HealthArticles';
 import LoginModal from './components/LoginModal';
 import { getHealthInsights } from './services/geminiService';
+import { saveLead } from './services/firebase';
 
 const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -97,13 +98,27 @@ const App: React.FC = () => {
     });
   }, [userData, userEmail]);
 
-  const handleLogin = (email: string) => {
+  const handleLogin = async (email: string) => {
+    // Optimistically set the state to close the modal and show results
     setUserEmail(email);
     setShowLogin(false);
-    // Automatically trigger calculation once logged in
-    // Note: This relies on the fact that 'userEmail' will be available in the next render cycle's 'calculateBMR'
-    // but to be safe and responsive, we can set state and then use an effect or just call the logic.
-    // However, since state updates are async, we use a simple effect below.
+
+    // Persist to Firebase in the background
+    try {
+      await saveLead(email, {
+        metrics: {
+          age: userData.age,
+          gender: userData.gender,
+          weight: userData.weight,
+          height: userData.height,
+          activity: userData.activityLevel,
+          units: userData.unitSystem
+        }
+      });
+    } catch (error) {
+      // We don't block the user if Firebase fails, but we log it
+      console.error("Failed to persist lead:", error);
+    }
   };
 
   // Trigger calculation when userEmail is set and showLogin was just closed
