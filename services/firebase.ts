@@ -1,9 +1,10 @@
-
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
+import "firebase/compat/analytics";
+import { UserData } from "../types";
 
 /**
- * Firebase configuration using the project keys provided.
+ * Your web app's Firebase configuration
  */
 const firebaseConfig = {
   apiKey: "AIzaSyD_ZY9Suf5-2vGYkd5ssR-Ssl9GiLfOFmI",
@@ -15,28 +16,51 @@ const firebaseConfig = {
   measurementId: "G-NG6RWXYRNW"
 };
 
-// Initialize Firebase using the modular v9 SDK pattern.
-// Ensure imports from "firebase/app" are correctly resolved by the environment.
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase using the compat layer to resolve "no exported member 'initializeApp'"
+const app = firebase.initializeApp(firebaseConfig);
 
-// Initialize Cloud Firestore
-const db = getFirestore(app);
+// Initialize Cloud Firestore using the compat layer
+export const db = firebase.firestore();
+
+// Initialize Analytics using the compat layer's isSupported check to resolve "no exported member 'getAnalytics' and 'isSupported'"
+firebase.analytics.isSupported().then(supported => {
+  if (supported) {
+    firebase.analytics();
+  }
+}).catch(err => console.debug("Analytics not supported in this environment:", err));
 
 /**
- * Saves a user's email and their metabolic metrics to the "leads" collection.
+ * Saves a user's lead information from their UserData state.
+ * Only proceeds if an email is present in the provided state.
  */
-export const saveLead = async (email: string, metadata: any = {}) => {
+export const saveLead = async (userData: UserData) => {
+  const { email } = userData;
+
+  // Ensure this is done only if an email is present
+  if (!email) {
+    console.debug("Skipping lead save: No email found in user data.");
+    return;
+  }
+
   try {
-    const docRef = await addDoc(collection(db, "leads"), {
+    // Using compat style collection and add methods
+    const docRef = await db.collection("leads").add({
       email,
-      ...metadata,
-      createdAt: serverTimestamp(),
+      metrics: {
+        age: userData.age,
+        gender: userData.gender,
+        weight: userData.weight,
+        height: userData.height,
+        activity: userData.activityLevel,
+        units: userData.unitSystem
+      },
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       source: "bmr-calculator-pro"
     });
-    console.log("Lead successfully saved to Firebase with ID: ", docRef.id);
+    console.log("Lead successfully saved with ID: ", docRef.id);
     return docRef.id;
   } catch (e) {
-    console.error("Firebase Error: Make sure your Firestore rules allow writes.", e);
+    console.error("Firebase Error while saving lead:", e);
     throw e;
   }
 };

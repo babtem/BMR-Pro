@@ -49,7 +49,7 @@ const App: React.FC = () => {
 
   const calculateBMR = useCallback(() => {
     // If user hasn't provided an email yet, show the login modal first
-    if (!userEmail) {
+    if (!userEmail && !userData.email) {
       setShowLogin(true);
       return;
     }
@@ -99,34 +99,26 @@ const App: React.FC = () => {
   }, [userData, userEmail]);
 
   const handleLogin = async (email: string) => {
-    // Optimistically set the state to close the modal and show results
+    // Update userData state with the email
+    const updatedUserData = { ...userData, email };
+    setUserData(updatedUserData);
     setUserEmail(email);
     setShowLogin(false);
 
-    // Persist to Firebase in the background
+    // Persist to Firebase using the updated UserData state
     try {
-      await saveLead(email, {
-        metrics: {
-          age: userData.age,
-          gender: userData.gender,
-          weight: userData.weight,
-          height: userData.height,
-          activity: userData.activityLevel,
-          units: userData.unitSystem
-        }
-      });
+      await saveLead(updatedUserData);
     } catch (error) {
-      // We don't block the user if Firebase fails, but we log it
       console.error("Failed to persist lead:", error);
     }
   };
 
   // Trigger calculation when userEmail is set and showLogin was just closed
   useEffect(() => {
-    if (userEmail && results === null && !showLogin) {
+    if ((userEmail || userData.email) && results === null && !showLogin) {
       calculateBMR();
     }
-  }, [userEmail, showLogin, results, calculateBMR]);
+  }, [userEmail, userData.email, showLogin, results, calculateBMR]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 py-12 px-4 sm:px-6 lg:px-8">

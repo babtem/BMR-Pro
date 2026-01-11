@@ -24,6 +24,7 @@ export interface UserData {
   height: number;
   activityLevel: ActivityLevel;
   unitSystem: UnitSystem;
+  email?: string;
 }
 
 export interface BMRResults {
